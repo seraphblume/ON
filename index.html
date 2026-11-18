@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O(n!) — ZepheniaLabs</title>
+<meta name="description" content="O(n!) — a ZepheniaLabs assessment. 101 doors, each harder than the last.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 2h24v20l-6 8H2V10z' fill='%2315171A'/%3E%3Cpath d='M9 9h14L9 23h14' stroke='%23FFA82E' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="wordmark">ZEPHENIA<b>LABS</b></span>
+    <span class="divider"></span>
+    <span class="product">O(n!)</span>
+  </div>
+  <nav class="actions" hidden>
+    <span class="candidate" id="who"></span>
+    <button class="btn ghost sm" data-open="timeline">Timeline</button>
+    <button class="btn ghost sm" data-open="dossier">Dossier</button>
+    <button class="btn ghost sm" data-open="settings">Progress</button>
+  </nav>
+</header>
+
+<div class="strip" id="strip" hidden></div>
+
+<main id="app">
+  <!-- entry -->
+  <section class="screen" id="entry" hidden>
+    <div class="panel entry">
+      <p class="eyebrow">ZepheniaLabs // Personnel</p>
+      <h1 class="title-on">O(n!)</h1>
+      <p class="subtitle">A ZepheniaLabs assessment</p>
+      <p class="lead">101 doors. Each one is harder than the last. The answer to each door is the key to the next — there is no skipping ahead.</p>
+      <ul class="rules">
+        <li><b>No outside help.</b> No search engines, no AI assistants, no other people. The tools built into your own browser are part of the test.</li>
+        <li><b>The page is not the whole puzzle.</b> From Door 8 onward you will need a desktop browser with its developer tools — the address bar and the inspector may hold what you need.</li>
+        <li><b>Code is not for running.</b> Snippets are written in an undisclosed language. Trace them by hand.</li>
+        <li><b>Two hints per door.</b> Every hint you open is recorded on your timeline.</li>
+        <li><b>Ranking</b> is by the furthest door reached, then by the fewest hints used.</li>
+      </ul>
+      <form id="entry-form" autocomplete="off">
+        <label for="callsign">Callsign</label>
+        <input id="callsign" name="callsign" maxlength="24" minlength="2" required placeholder="choose a name" spellcheck="false">
+        <label class="check"><input type="checkbox" id="pledge" required> I will complete this assessment without outside help.</label>
+        <button class="btn primary" type="submit">Begin assessment</button>
+      </form>
+      <p class="fine">Progress is kept in this browser only. Use <i>Progress → Export</i> to move between devices.</p>
+    </div>
+  </section>
+
+  <!-- level -->
+  <section class="screen" id="stage" hidden>
+    <article class="panel level-card" id="card">
+      <div class="level-meta">
+        <span class="tier" id="tier"></span>
+        <span class="door" id="door"></span>
+      </div>
+      <h2 class="level-title" id="title"></h2>
+      <div class="code-banner" id="code-banner" hidden>
+        <strong>Undisclosed language — do not run.</strong>
+        This snippet is written in a language you are not told. Don’t try to run it or port it to a real language; trace it by hand.
+      </div>
+      <div class="level-body" id="body"></div>
+      <form class="answer" id="answer-form" autocomplete="off">
+        <input id="answer" placeholder="Your answer" spellcheck="false" autocapitalize="off" aria-label="Answer">
+        <button class="btn primary" type="submit" id="submit">Submit</button>
+      </form>
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+      <div class="hints">
+        <button class="btn ghost sm" id="hint1">Hint 1</button>
+        <button class="btn ghost sm" id="hint2">Hint 2</button>
+        <span class="hint-note">Hints are recorded on your timeline.</span>
+      </div>
+      <ol class="hint-list" id="hint-list"></ol>
+    </article>
+  </section>
+
+  <!-- complete -->
+  <section class="screen" id="complete" hidden>
+    <div class="panel certificate" id="cert"></div>
+  </section>
+</main>
+
+<!-- drawers / modals -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="timeline" hidden>
+  <header><h3>Progress timeline</h3><button class="btn ghost sm" data-close>Close</button></header>
+  <div class="stats" id="stats"></div>
+  <div class="legend">
+    <span><i class="cell clean"></i>No hints</span><span><i class="cell h1"></i>1 hint</span>
+    <span><i class="cell h2"></i>2 hints</span><span><i class="cell current"></i>Current</span><span><i class="cell"></i>Locked</span>
+  </div>
+  <div class="tl" id="tl"></div>
+</aside>
+<aside class="drawer" id="dossier" hidden>
+  <header><h3>Dossier</h3><button class="btn ghost sm" data-close>Close</button></header>
+  <p class="fine">Every door you have opened, with the answer you gave.</p>
+  <div id="dossier-list"></div>
+</aside>
+<aside class="drawer" id="settings" hidden>
+  <header><h3>Progress</h3><button class="btn ghost sm" data-close>Close</button></header>
+  <p>Your progress lives only in this browser. Export it to keep a backup or continue elsewhere.</p>
+  <div class="row"><button class="btn ghost" id="export">Export code</button><button class="btn ghost" id="import">Import code</button></div>
+  <textarea id="io" rows="5" spellcheck="false" placeholder="Progress code"></textarea>
+  <hr>
+  <button class="btn danger" id="reset">Reset all progress</button>
+</aside>
+<div class="modal" id="modal" hidden>
+  <div class="panel">
+    <h3 id="modal-title"></h3>
+    <p id="modal-text"></p>
+    <div class="row"><button class="btn ghost" id="modal-no">Cancel</button><button class="btn primary" id="modal-yes">Continue</button></div>
+  </div>
+</div>
+<div class="viewer" id="viewer" hidden>
+  <div class="panel">
+    <header><h3 id="viewer-title"></h3><button class="btn ghost sm" data-close-viewer>Close</button></header>
+    <div class="level-body" id="viewer-body"></div>
+  </div>
+</div>
+
+<noscript><p class="panel">This assessment needs JavaScript.</p></noscript>
+<script type="module" src="app.js"></script>
+</body>
+</html>
