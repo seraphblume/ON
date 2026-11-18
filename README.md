@@ -24,7 +24,7 @@ The difficulty curve is steep:
 
 ## Rules of engagement
 
-- **No outside help.** No search engines, no AI assistants, no other people. The tools built into your own browser are allowed. They're part of the test.
+- **No outside help.** No search engines, no AI assistants, no other people.
 - **Two hints per door.** Hints are always available, and every hint you open is recorded on your progress timeline.
 - **Answers are forgiving about format.** Capital letters, spaces, punctuation and accents are ignored.
 
