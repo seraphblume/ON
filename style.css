@@ -140,10 +140,18 @@ canvas { max-width: 100%; }
 .zl-palette input:checked + label { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .3em; }
 .zl-palette input:focus-visible + label { outline: 2px solid var(--zl-accent); outline-offset: 3px; }
 
+/* languages: Plex Sans KR / JP carry the scripts Plex Sans does not */
+:root[lang="ko"] { --font-sans: "IBM Plex Sans", "IBM Plex Sans KR", system-ui, sans-serif; --font-mono: "IBM Plex Mono", "IBM Plex Sans KR", ui-monospace, monospace; }
+:root[lang="ja"] { --font-sans: "IBM Plex Sans", "IBM Plex Sans JP", system-ui, sans-serif; --font-mono: "IBM Plex Mono", "IBM Plex Sans JP", ui-monospace, monospace; }
+:root[lang="ko"] body { word-break: keep-all; overflow-wrap: anywhere; }
+:root[lang="ja"] body { line-break: strict; }
+.footer-controls { display: flex; flex-direction: column; align-items: flex-end; gap: var(--row-1); }
+
 /* completion */
 .complete .hero { align-items: start; }
 
 @media (max-width: 700px) {
+  .footer-controls { align-items: flex-start; }
   :root { --gutter: 23.65px; }
   .display { font-size: 44px; line-height: 47.3px; }
   .claim, h2 { font-size: 24px; line-height: 31.53px; }
@@ -156,3 +164,5 @@ canvas { max-width: 100%; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 420px) { .masthead { flex-wrap: wrap; } }
+.zl-lang label[lang="ko"] { font-family: "IBM Plex Sans KR", sans-serif; }
+.zl-lang label[lang="ja"] { font-family: "IBM Plex Sans JP", sans-serif; }

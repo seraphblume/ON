@@ -6,6 +6,8 @@ O(n!) is a puzzle assessment from ZepheniaLabs. It begins with a few warm-up que
 
 ### ▸ [Begin the assessment](https://seraphblume.github.io/ON/)
 
+Available in English, Español, 한국어 and 日本語. Answers are always given in English.
+
 ---
 
 ## How it works
