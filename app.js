@@ -1,5 +1,6 @@
 // O(n!) — a ZepheniaLabs assessment
 import { mountField, lockupHTML } from './field.js';
+import { t, setLang, getLang, locale, applyStatic } from './i18n.js';
 // This file holds no answers. Every door is encrypted; the answer to door n is
 // the only thing that can unlock door n + 1. Reading this code will not help you.
 
@@ -14,6 +15,11 @@ let BUNDLE = null;
 let state = null;
 let level = null;          // decrypted payload of the open door
 let cleanups = [];
+let rawLevel = null;
+// A door's translated title, text and triggers; ciphers and answers are the same in every language.
+const loc = (p) => (p && p.i18n && p.i18n[getLang()] ? { ...p, ...p.i18n[getLang()] } : p);
+const pad = (n) => String(n).padStart(3, '0');
+const tierLabel = (tr) => t('tier', { roman: tr.roman, name: t('tier.' + tr.name) });
 
 // ---------------------------------------------------------------- crypto
 async function openBox(raw, box) {
@@ -98,10 +104,11 @@ async function route() {
 // ---------------------------------------------------------------- level
 async function openLevel(n) {
   runCleanups();
-  level = await openJSON(keyFor(n), BUNDLE.levels[n - 1].payload);
+  rawLevel = await openJSON(keyFor(n), BUNDLE.levels[n - 1].payload);
+  level = loc(rawLevel);
   show('stage');
-  $('#tier').textContent = `Tier ${level.tier.roman} · ${level.tier.name}`;
-  $('#door').textContent = `Door ${String(n).padStart(3, '0')} / ${BUNDLE.count}`;
+  $('#tier').textContent = tierLabel(level.tier);
+  $('#door').textContent = t('door', { n: pad(n), total: BUNDLE.count });
   $('#title').textContent = level.title;
   $('#code-banner').hidden = !level.code;
   $('#body').innerHTML = level.body;
@@ -125,20 +132,20 @@ $('#answer-form').addEventListener('submit', async (e) => {
   if (!a) return;
   const btn = $('#submit');
   btn.disabled = true;
-  setVerdict('Verifying');
+  setVerdict(t('verdict.verifying'));
   const next = await tryGates(n, a);
   btn.disabled = false;
   if (!next) {
     state.attempts[n] = (state.attempts[n] || 0) + 1;
     save();
-    setVerdict(`Access denied · attempt ${state.attempts[n]}`);
+    setVerdict(t('verdict.denied', { n: state.attempts[n] }));
     return;
   }
   state.keys[n + 1] = b64(next);
   state.answers[n] = raw.trim();
   state.solvedAt[n] = Date.now();
   save();
-  setVerdict('Access granted');
+  setVerdict(t('verdict.granted'));
   setTimeout(route, 650);
 });
 
@@ -147,24 +154,22 @@ async function renderHints(n) {
   const used = state.hints[n] || 0;
   $('#hint1').disabled = used >= 1;
   $('#hint2').disabled = used !== 1;
-  $('#hint1').textContent = used >= 1 ? 'Hint 1 opened' : 'Open hint 1';
-  $('#hint2').textContent = used >= 2 ? 'Hint 2 opened' : used === 1 ? 'Open hint 2' : 'Hint 2 · after hint 1';
+  $('#hint1').textContent = used >= 1 ? t('hint.opened', { n: 1 }) : t('hint.open', { n: 1 });
+  $('#hint2').textContent = used >= 2 ? t('hint.opened', { n: 2 }) : used === 1 ? t('hint.open', { n: 2 }) : t('hint.after');
   const list = $('#hint-list');
   list.innerHTML = '';
   for (let j = 1; j <= used; j++) {
     const h = await openJSON(await hintKey(keyFor(n), n, j), BUNDLE.levels[n - 1].hints[j - 1]);
     const li = document.createElement('li');
     li.className = 'h' + j;
-    li.innerHTML = `<span class="label">Hint ${j}</span>${h.text}`;
+    li.innerHTML = `<span class="label">${t('hint.label', { n: j })}</span>${(h.i18n && h.i18n[getLang()]) || h.text}`;
     list.appendChild(li);
   }
 }
 async function takeHint(j) {
   const n = current();
   if ((state.hints[n] || 0) !== j - 1) return;
-  const ok = await confirmModal(`Open hint ${j}?`,
-    j === 1 ? 'Opening it marks this door as hinted on your timeline.'
-            : 'This is the last hint for this door. Opening it is recorded on your timeline.');
+  const ok = await confirmModal(t('hint.confirm', { n: j }), j === 1 ? t('hint.confirm1') : t('hint.confirm2'));
   if (!ok) return;
   state.hints[n] = j;
   save();
@@ -264,7 +269,6 @@ function runCleanups() {
 // ---------------------------------------------------------------- timeline
 // One glyph per door, on the field's tone ramp: denser is cleaner.
 const GLYPH = { locked: '·', current: '•', 0: '@', 1: '#', 2: '*' };
-const HINT_WORD = ['no hints', 'one hint', 'two hints'];
 function doorState(n) {
   if (n === current() && !finished()) return 'current';
   if (!state.keys[n + 1]) return 'locked';
@@ -272,7 +276,7 @@ function doorState(n) {
 }
 function glyphSpan(n) {
   const st = doorState(n), h = state.hints[n] || 0;
-  const title = st === 'locked' ? `Door ${n} · locked` : st === 'current' ? `Door ${n} · current${h ? ` · ${HINT_WORD[h]} so far` : ''}` : `Door ${n} · ${HINT_WORD[st]}`;
+  const title = st === 'locked' ? t('glyph.locked', { n }) : st === 'current' ? t('glyph.current', { n }) + (h ? t('glyph.sofar', { h: t('h' + h) }) : '') : t('glyph.done', { n, h: t('h' + st) });
   return `<span${st === 'current' ? ' class="now"' : ''} title="${title}">${GLYPH[st]}</span>`;
 }
 function renderStrip() {
@@ -286,31 +290,31 @@ function statsHTML() {
   const tries = Object.values(state.attempts).reduce((a, b) => a + b, 0);
   const days = Math.max(1, Math.round((Date.now() - state.started) / 864e5));
   return [
-    [finished() ? BUNDLE.count : current(), 'Furthest door'],
-    [hintsUsed(), 'Hints used'],
-    [clean, 'Clean solves'],
-    [Math.min(solved, BUNDLE.count), 'Doors opened'],
-    [tries, 'Denied attempts'],
-    [days, days === 1 ? 'Day' : 'Days'],
+    [finished() ? BUNDLE.count : current(), t('stat.furthest')],
+    [hintsUsed(), t('stat.hints')],
+    [clean, t('stat.clean')],
+    [Math.min(solved, BUNDLE.count), t('stat.opened')],
+    [tries, t('stat.denied')],
+    [days, days === 1 ? t('stat.day') : t('stat.days')],
   ].map(([v, k]) => `<div class="stat"><span class="claim">${v}</span><span class="label">${k}</span></div>`).join('');
 }
 function timelineHTML() {
   const tiers = [];
   for (const l of BUNDLE.levels) {
-    const t = tiers[tiers.length - 1];
-    if (!t || t.roman !== l.tier.roman) tiers.push({ ...l.tier, from: l.n, to: l.n });
-    else t.to = l.n;
+    const last = tiers[tiers.length - 1];
+    if (!last || last.roman !== l.tier.roman) tiers.push({ ...l.tier, from: l.n, to: l.n });
+    else last.to = l.n;
   }
-  return tiers.map((t) => {
+  return tiers.map((tr) => {
     let glyphs = '';
     const hinted = [];
-    for (let n = t.from; n <= t.to; n++) {
+    for (let n = tr.from; n <= tr.to; n++) {
       glyphs += glyphSpan(n);
-      if (state.hints[n]) hinted.push(`${String(n).padStart(3, '0')} (${state.hints[n]})`);
+      if (state.hints[n]) hinted.push(`${pad(n)} (${state.hints[n]})`);
     }
-    return `<div class="tier-row"><span class="label">Tier ${t.roman} · ${t.name} · doors ${t.from}–${t.to}</span>
+    return `<div class="tier-row"><span class="label">${t('tl.tier', { roman: tr.roman, name: t('tier.' + tr.name), from: tr.from, to: tr.to })}</span>
       <div class="tier-glyphs">${glyphs}</div>
-      <span class="label" style="margin-top: var(--row-1)">${hinted.length ? 'Hinted · ' + hinted.join(' · ') : 'No hints'}</span></div>`;
+      <span class="label" style="margin-top: var(--row-1)">${hinted.length ? t('tl.hinted') + ' · ' + hinted.join(' · ') : t('tl.none')}</span></div>`;
   }).join('');
 }
 function renderTimeline() {
@@ -323,16 +327,17 @@ function renderDossier() {
   const list = $('#dossier-list');
   list.innerHTML = '';
   const solved = Object.keys(state.answers).map(Number).sort((a, b) => a - b);
-  if (!solved.length) { list.innerHTML = '<p class="label">Nothing yet</p>'; return; }
+  if (!solved.length) { list.innerHTML = `<p class="label">${t('dossier.empty')}</p>`; return; }
   for (const n of solved) {
     const row = document.createElement('button');
     row.className = 'dossier-item';
-    row.innerHTML = `<span class="label">${String(n).padStart(3, '0')}</span><span class="t body"></span><span class="label a"></span>`;
+    row.innerHTML = `<span class="label">${pad(n)}</span><span class="t body"></span><span class="label a"></span>`;
     row.querySelector('.a').textContent = state.answers[n];
-    openJSON(keyFor(n), BUNDLE.levels[n - 1].payload).then((p) => {
+    openJSON(keyFor(n), BUNDLE.levels[n - 1].payload).then((raw) => {
+      const p = loc(raw);
       row.querySelector('.t').textContent = p.title;
       row.onclick = () => {
-        $('#viewer-title').textContent = `Door ${n} · ${p.title}`;
+        $('#viewer-title').textContent = t('viewer', { n, title: p.title });
         $('#viewer-body').innerHTML = p.body;
         $('#viewer').hidden = false;
       };
@@ -393,6 +398,32 @@ matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => app
 applyTheme(currentPalette());
 $('#lockup').innerHTML = lockupHTML(40);
 
+// language: English by default; the viewer's choice is remembered
+function applyLang(l) {
+  setLang(l);
+  document.documentElement.setAttribute('lang', getLang());
+  const r = document.getElementById('lang-' + getLang());
+  if (r) r.checked = true;
+  applyStatic();
+}
+for (const r of document.querySelectorAll('input[name=lang]')) {
+  r.onchange = async () => {
+    try { localStorage.setItem('zl.lang', r.value); } catch { /* storage unavailable */ }
+    applyLang(r.value);
+    if (!BUNDLE || !state || !state.user) return;
+    renderStrip();
+    if (!$('#timeline').hidden) renderTimeline();
+    if (!$('#dossier').hidden) renderDossier();
+    if (finished()) showComplete();
+    else if (!$('#stage').hidden) {
+      const typed = $('#answer').value;
+      await openLevel(current());
+      $('#answer').value = typed;
+    }
+  };
+}
+applyLang(document.documentElement.getAttribute('lang') || 'en');
+
 // export / import / reset
 $('#export').onclick = () => {
   $('#io').value = 'ZLC1.' + btoa(unescape(encodeURIComponent(JSON.stringify(state))));
@@ -409,14 +440,14 @@ $('#import').onclick = async () => {
       if (n <= BUNDLE.count) await openBox(ub64(s.keys[n]), BUNDLE.levels[n - 1].payload);
       else await openBox(ub64(s.keys[n]), BUNDLE.final);
     }
-    if (!(await confirmModal('Replace progress?', `Load progress for “${s.user}”? Your current progress in this browser will be replaced.`))) return;
+    if (!(await confirmModal(t('import.title'), t('import.text', { user: s.user })))) return;
     state = s; save(); closeDrawers(); route();
   } catch {
-    $('#io').value = 'That code is not valid.';
+    $('#io').value = t('import.invalid');
   }
 };
 $('#reset').onclick = async () => {
-  if (!(await confirmModal('Reset everything?', 'All progress, answers and hint records in this browser will be erased.'))) return;
+  if (!(await confirmModal(t('reset.title'), t('reset.text')))) return;
   runCleanups();
   localStorage.removeItem(STORE);
   location.href = location.pathname;
@@ -426,14 +457,14 @@ $('#reset').onclick = async () => {
 let endField = null;
 async function showComplete() {
   runCleanups();
-  const fin = await openJSON(keyFor(BUNDLE.count + 1), BUNDLE.final);
+  const fin = loc(await openJSON(keyFor(BUNDLE.count + 1), BUNDLE.final));
   show('complete');
-  const when = new Date(Math.max(...Object.values(state.solvedAt))).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  const when = new Date(Math.max(...Object.values(state.solvedAt))).toLocaleDateString(locale(), { year: 'numeric', month: 'long', day: 'numeric' });
   $('#complete').innerHTML = `
     <div id="cert">
       <div class="hero">
         <div>
-          <p class="label">ZepheniaLabs · personnel record</p>
+          <p class="label">${t('cert.eyebrow')}</p>
           <h1 class="display"></h1>
           <p class="claim" id="cert-user"></p>
           <div class="body lede">${fin.body}</div>
@@ -441,7 +472,7 @@ async function showComplete() {
         <canvas id="end-field"></canvas>
       </div>
       <div class="stats">${statsHTML()}</div>
-      <p class="label">Completed ${when} · ranked by furthest door, then fewest hints</p>
+      <p class="label">${t('cert.done', { date: when })}</p>
       <div style="margin-top: var(--row-4)">${timelineHTML()}</div>
     </div>`;
   $('#cert .display').textContent = fin.title;
@@ -451,6 +482,6 @@ async function showComplete() {
 }
 
 boot().catch((e) => {
-  document.getElementById('app').innerHTML = '<div class="level"><h2>The assessment could not be loaded.</h2><p class="body" style="margin-top: var(--row-3)">The door data did not arrive. Check your connection and reload the page.</p></div>';
+  document.getElementById('app').innerHTML = `<div class="level"><h2>${t('error.title')}</h2><p class="body" style="margin-top: var(--row-3)">${t('error.text')}</p></div>`;
   console.error(e);
 });

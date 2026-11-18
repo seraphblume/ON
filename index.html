@@ -13,12 +13,17 @@
     if (!/^(zephyr|boreas|harukaze)$/.test(p)) p = 'zephyr';
     var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches;
     document.documentElement.setAttribute('data-theme', p + '-' + (light ? 'light' : 'dark'));
+    var l = 'en';
+    try { l = localStorage.getItem('zl.lang') || l; } catch (e) {}
+    if (!/^(en|es|ko|ja)$/.test(l)) l = 'en';
+    document.documentElement.setAttribute('lang', l);
   })();
 </script>
 <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/ibm-plex-sans-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="fonts/cjk.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -26,13 +31,13 @@
   <header class="masthead">
     <span id="lockup"></span>
     <nav class="nav" id="nav" hidden aria-label="Assessment">
-      <button class="link" data-open="timeline">Timeline</button>
-      <button class="link" data-open="dossier">Dossier</button>
-      <button class="link" data-open="settings">Progress</button>
+      <button class="link" data-open="timeline" data-i18n="nav.timeline">Timeline</button>
+      <button class="link" data-open="dossier" data-i18n="nav.dossier">Dossier</button>
+      <button class="link" data-open="settings" data-i18n="nav.progress">Progress</button>
     </nav>
   </header>
 
-  <div class="progress" id="progress" hidden title="Open the timeline">
+  <div class="progress" id="progress" hidden data-i18n-title="progress.open">
     <span class="label" id="who"></span>
     <span class="glyphs" id="strip" aria-hidden="true"></span>
   </div>
@@ -42,25 +47,26 @@
     <section class="screen" id="entry" hidden>
       <div class="hero">
         <div>
-          <p class="label">ZepheniaLabs · assessment</p>
+          <p class="label" data-i18n="entry.eyebrow">ZepheniaLabs · assessment</p>
           <h1 class="display">O(n!)</h1>
-          <p class="claim">101 doors. Each one harder than the last.</p>
-          <p class="body lede">The answer to each door is the key to the next. There is no skipping ahead.</p>
+          <p class="claim" data-i18n="entry.claim">101 doors. Each one harder than the last.</p>
+          <p class="body lede" data-i18n="entry.lede">The answer to each door is the key to the next. There is no skipping ahead.</p>
         </div>
         <canvas id="entry-field"></canvas>
       </div>
       <ul class="rules">
-        <li><b>No outside help.</b> No search engines, no AI assistants, no other people.</li>
-        <li><b>Two hints per door.</b> Every hint you open is recorded on your timeline.</li>
-        <li><b>Ranking</b> is by the furthest door reached, then by the fewest hints used.</li>
+        <li data-i18n-html="rule.help"><b>No outside help.</b> No search engines, no AI assistants, no other people.</li>
+        <li data-i18n-html="rule.hints"><b>Two hints per door.</b> Every hint you open is recorded on your timeline.</li>
+        <li data-i18n-html="rule.rank"><b>Ranking</b> is by the furthest door reached, then by the fewest hints used.</li>
+        <li data-i18n-html="rule.english" hidden></li>
       </ul>
       <form id="entry-form" class="entry-form" autocomplete="off">
-        <label class="label field" for="callsign">Callsign</label>
+        <label class="label field" for="callsign" data-i18n="entry.callsign">Callsign</label>
         <input id="callsign" name="callsign" maxlength="24" minlength="2" required spellcheck="false">
-        <label class="check"><input type="checkbox" id="pledge" required> I will complete this assessment without outside help.</label>
-        <button class="btn" type="submit">Begin assessment</button>
+        <label class="check"><input type="checkbox" id="pledge" required> <span data-i18n="entry.pledge">I will complete this assessment without outside help.</span></label>
+        <button class="btn" type="submit" data-i18n="entry.begin">Begin assessment</button>
       </form>
-      <p class="body" style="margin-top: var(--row-4)">Progress is kept in this browser only. To move between devices, use Progress, then Export.</p>
+      <p class="body" style="margin-top: var(--row-4)" data-i18n="entry.note">Progress is kept in this browser only. To move between devices, use Progress, then Export.</p>
     </section>
 
     <!-- level -->
@@ -72,19 +78,19 @@
         </div>
         <h2 class="level-title" id="title"></h2>
         <div class="callout" id="code-banner" hidden>
-          <p class="label">Undisclosed language · do not run</p>
-          <p class="body" style="margin:0">This snippet is written in a language you are not told. Don’t run it or port it to a real language. Trace it by hand.</p>
+          <p class="label" data-i18n="code.label">Undisclosed language · do not run</p>
+          <p class="body" style="margin:0" data-i18n="code.text">This snippet is written in a language you are not told. Don’t run it or port it to a real language. Trace it by hand.</p>
         </div>
         <div class="level-body" id="body"></div>
         <form class="answer" id="answer-form" autocomplete="off">
-          <input id="answer" spellcheck="false" autocapitalize="off" aria-label="Answer">
-          <button class="btn" type="submit" id="submit">Submit</button>
+          <input id="answer" spellcheck="false" autocapitalize="off" aria-label="Answer" data-i18n-aria="answer.aria" lang="en">
+          <button class="btn" type="submit" id="submit" data-i18n="submit">Submit</button>
         </form>
         <p class="label verdict" id="verdict" aria-live="polite"></p>
         <div class="hints">
           <button class="link" id="hint1">Open hint 1</button>
           <button class="link" id="hint2">Open hint 2</button>
-          <span class="label">Hints are recorded on your timeline</span>
+          <span class="label" data-i18n="hint.note">Hints are recorded on your timeline</span>
         </div>
         <ol class="hint-list" id="hint-list"></ol>
       </article>
@@ -96,11 +102,20 @@
 
   <footer class="footer">
     <span class="label">O(n!) · ZepheniaLabs</span>
+    <div class="footer-controls">
     <div class="label zl-palette" role="radiogroup" aria-labelledby="palette-l">
-      <span id="palette-l">Palette</span>
+      <span id="palette-l" data-i18n="footer.palette">Palette</span>
       <input type="radio" name="palette" id="pal-zephyr" value="zephyr"><label for="pal-zephyr">Zephyr</label>
       <input type="radio" name="palette" id="pal-boreas" value="boreas"><label for="pal-boreas">Boreas</label>
       <input type="radio" name="palette" id="pal-harukaze" value="harukaze"><label for="pal-harukaze">Harukaze</label>
+    </div>
+    <div class="label zl-palette zl-lang" role="radiogroup" aria-labelledby="lang-l">
+      <span id="lang-l" data-i18n="footer.language">Language</span>
+      <input type="radio" name="lang" id="lang-en" value="en"><label for="lang-en" lang="en">English</label>
+      <input type="radio" name="lang" id="lang-es" value="es"><label for="lang-es" lang="es">Español</label>
+      <input type="radio" name="lang" id="lang-ko" value="ko"><label for="lang-ko" lang="ko">한국어</label>
+      <input type="radio" name="lang" id="lang-ja" value="ja"><label for="lang-ja" lang="ja">日本語</label>
+    </div>
     </div>
   </footer>
 </div>
@@ -108,34 +123,34 @@
 <!-- sheets -->
 <section class="sheet" id="timeline" hidden>
   <div class="page">
-    <div class="sheet-head"><h3>Timeline</h3><button class="link" data-close>Close</button></div>
+    <div class="sheet-head"><h3 data-i18n="nav.timeline">Timeline</h3><button class="link" data-close data-i18n="close">Close</button></div>
     <div class="stats" id="stats"></div>
-    <p class="label legend">@ No hints   # One hint   * Two hints   • Current   · Locked</p>
+    <p class="label legend" data-i18n="legend">@ No hints   # One hint   * Two hints   • Current   · Locked</p>
     <div id="tl"></div>
   </div>
 </section>
 <section class="sheet" id="dossier" hidden>
   <div class="page">
-    <div class="sheet-head"><h3>Dossier</h3><button class="link" data-close>Close</button></div>
-    <p class="body">Every door you have opened, with the answer you gave.</p>
+    <div class="sheet-head"><h3 data-i18n="nav.dossier">Dossier</h3><button class="link" data-close data-i18n="close">Close</button></div>
+    <p class="body" data-i18n="dossier.intro">Every door you have opened, with the answer you gave.</p>
     <div id="dossier-list"></div>
   </div>
 </section>
 <section class="sheet" id="settings" hidden>
   <div class="page">
-    <div class="sheet-head"><h3>Progress</h3><button class="link" data-close>Close</button></div>
-    <p class="body">Your progress lives only in this browser. Export it to keep a backup or to continue on another device.</p>
-    <div class="row" style="margin: var(--row-3) 0"><button class="btn quiet" id="export">Export code</button><button class="btn quiet" id="import">Import code</button></div>
-    <label class="label field" for="io">Progress code</label>
+    <div class="sheet-head"><h3 data-i18n="nav.progress">Progress</h3><button class="link" data-close data-i18n="close">Close</button></div>
+    <p class="body" data-i18n="progress.intro">Your progress lives only in this browser. Export it to keep a backup or to continue on another device.</p>
+    <div class="row" style="margin: var(--row-3) 0"><button class="btn quiet" id="export" data-i18n="export">Export code</button><button class="btn quiet" id="import" data-i18n="import">Import code</button></div>
+    <label class="label field" for="io" data-i18n="progress.code">Progress code</label>
     <textarea id="io" rows="5" spellcheck="false"></textarea>
     <div style="margin-top: var(--row-6); border-top: 1px solid var(--zl-ink); padding-top: var(--row-3)">
-      <button class="link" id="reset">Reset all progress</button>
+      <button class="link" id="reset" data-i18n="reset">Reset all progress</button>
     </div>
   </div>
 </section>
 <section class="sheet" id="viewer" hidden>
   <div class="page">
-    <div class="sheet-head"><h3 id="viewer-title"></h3><button class="link" data-close-viewer>Close</button></div>
+    <div class="sheet-head"><h3 id="viewer-title"></h3><button class="link" data-close-viewer data-i18n="close">Close</button></div>
     <div class="level-body" id="viewer-body"></div>
   </div>
 </section>
@@ -143,7 +158,7 @@
   <div class="inner">
     <p class="claim" id="modal-title"></p>
     <p class="body" id="modal-text"></p>
-    <div class="row"><button class="btn" id="modal-yes">Continue</button><button class="link" id="modal-no">Cancel</button></div>
+    <div class="row"><button class="btn" id="modal-yes" data-i18n="continue">Continue</button><button class="link" id="modal-no" data-i18n="cancel">Cancel</button></div>
   </div>
 </div>
 
