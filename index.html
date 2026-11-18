@@ -1,129 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="zephyr-dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>O(n!) — ZepheniaLabs</title>
-<meta name="description" content="O(n!) — a ZepheniaLabs assessment. 101 doors, each harder than the last.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="description" content="O(n!), a ZepheniaLabs assessment. 101 doors, each harder than the last.">
+<script>
+  // Dark first; light when the viewer's system is light. The palette is the viewer's choice.
+  (function () {
+    var p = 'zephyr';
+    try { p = localStorage.getItem('zl.palette') || p; } catch (e) {}
+    if (!/^(zephyr|boreas|harukaze)$/.test(p)) p = 'zephyr';
+    var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches;
+    document.documentElement.setAttribute('data-theme', p + '-' + (light ? 'light' : 'dark'));
+  })();
+</script>
+<link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/ibm-plex-sans-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 2h24v20l-6 8H2V10z' fill='%2315171A'/%3E%3Cpath d='M9 9h14L9 23h14' stroke='%23FFA82E' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <span class="mark" aria-hidden="true"></span>
-    <span class="wordmark">ZEPHENIA<b>LABS</b></span>
-    <span class="divider"></span>
-    <span class="product">O(n!)</span>
+<div class="page">
+  <header class="masthead">
+    <span id="lockup"></span>
+    <nav class="nav" id="nav" hidden aria-label="Assessment">
+      <button class="link" data-open="timeline">Timeline</button>
+      <button class="link" data-open="dossier">Dossier</button>
+      <button class="link" data-open="settings">Progress</button>
+    </nav>
+  </header>
+
+  <div class="progress" id="progress" hidden title="Open the timeline">
+    <span class="label" id="who"></span>
+    <span class="glyphs" id="strip" aria-hidden="true"></span>
   </div>
-  <nav class="actions" hidden>
-    <span class="candidate" id="who"></span>
-    <button class="btn ghost sm" data-open="timeline">Timeline</button>
-    <button class="btn ghost sm" data-open="dossier">Dossier</button>
-    <button class="btn ghost sm" data-open="settings">Progress</button>
-  </nav>
-</header>
 
-<div class="strip" id="strip" hidden></div>
-
-<main id="app">
-  <!-- entry -->
-  <section class="screen" id="entry" hidden>
-    <div class="panel entry">
-      <p class="eyebrow">ZepheniaLabs // Personnel</p>
-      <h1 class="title-on">O(n!)</h1>
-      <p class="subtitle">A ZepheniaLabs assessment</p>
-      <p class="lead">101 doors. Each one is harder than the last. The answer to each door is the key to the next — there is no skipping ahead.</p>
+  <main id="app">
+    <!-- entry -->
+    <section class="screen" id="entry" hidden>
+      <div class="hero">
+        <div>
+          <p class="label">ZepheniaLabs · assessment</p>
+          <h1 class="display">O(n!)</h1>
+          <p class="claim">101 doors. Each one harder than the last.</p>
+          <p class="body lede">The answer to each door is the key to the next. There is no skipping ahead.</p>
+        </div>
+        <canvas id="entry-field"></canvas>
+      </div>
       <ul class="rules">
         <li><b>No outside help.</b> No search engines, no AI assistants, no other people.</li>
         <li><b>Two hints per door.</b> Every hint you open is recorded on your timeline.</li>
         <li><b>Ranking</b> is by the furthest door reached, then by the fewest hints used.</li>
       </ul>
-      <form id="entry-form" autocomplete="off">
-        <label for="callsign">Callsign</label>
-        <input id="callsign" name="callsign" maxlength="24" minlength="2" required placeholder="choose a name" spellcheck="false">
+      <form id="entry-form" class="entry-form" autocomplete="off">
+        <label class="label field" for="callsign">Callsign</label>
+        <input id="callsign" name="callsign" maxlength="24" minlength="2" required spellcheck="false">
         <label class="check"><input type="checkbox" id="pledge" required> I will complete this assessment without outside help.</label>
-        <button class="btn primary" type="submit">Begin assessment</button>
+        <button class="btn" type="submit">Begin assessment</button>
       </form>
-      <p class="fine">Progress is kept in this browser only. Use <i>Progress → Export</i> to move between devices.</p>
+      <p class="body" style="margin-top: var(--row-4)">Progress is kept in this browser only. To move between devices, use Progress, then Export.</p>
+    </section>
+
+    <!-- level -->
+    <section class="screen level" id="stage" hidden>
+      <article id="card" class="level-card">
+        <div class="level-meta">
+          <span class="label" id="tier"></span>
+          <span class="label" id="door"></span>
+        </div>
+        <h2 class="level-title" id="title"></h2>
+        <div class="callout" id="code-banner" hidden>
+          <p class="label">Undisclosed language · do not run</p>
+          <p class="body" style="margin:0">This snippet is written in a language you are not told. Don’t run it or port it to a real language. Trace it by hand.</p>
+        </div>
+        <div class="level-body" id="body"></div>
+        <form class="answer" id="answer-form" autocomplete="off">
+          <input id="answer" spellcheck="false" autocapitalize="off" aria-label="Answer">
+          <button class="btn" type="submit" id="submit">Submit</button>
+        </form>
+        <p class="label verdict" id="verdict" aria-live="polite"></p>
+        <div class="hints">
+          <button class="link" id="hint1">Open hint 1</button>
+          <button class="link" id="hint2">Open hint 2</button>
+          <span class="label">Hints are recorded on your timeline</span>
+        </div>
+        <ol class="hint-list" id="hint-list"></ol>
+      </article>
+    </section>
+
+    <!-- complete -->
+    <section class="screen complete" id="complete" hidden></section>
+  </main>
+
+  <footer class="footer">
+    <span class="label">O(n!) · ZepheniaLabs</span>
+    <div class="label zl-palette" role="radiogroup" aria-labelledby="palette-l">
+      <span id="palette-l">Palette</span>
+      <input type="radio" name="palette" id="pal-zephyr" value="zephyr"><label for="pal-zephyr">Zephyr</label>
+      <input type="radio" name="palette" id="pal-boreas" value="boreas"><label for="pal-boreas">Boreas</label>
+      <input type="radio" name="palette" id="pal-harukaze" value="harukaze"><label for="pal-harukaze">Harukaze</label>
     </div>
-  </section>
-
-  <!-- level -->
-  <section class="screen" id="stage" hidden>
-    <article class="panel level-card" id="card">
-      <div class="level-meta">
-        <span class="tier" id="tier"></span>
-        <span class="door" id="door"></span>
-      </div>
-      <h2 class="level-title" id="title"></h2>
-      <div class="code-banner" id="code-banner" hidden>
-        <strong>Undisclosed language — do not run.</strong>
-        This snippet is written in a language you are not told. Don’t try to run it or port it to a real language; trace it by hand.
-      </div>
-      <div class="level-body" id="body"></div>
-      <form class="answer" id="answer-form" autocomplete="off">
-        <input id="answer" placeholder="Your answer" spellcheck="false" autocapitalize="off" aria-label="Answer">
-        <button class="btn primary" type="submit" id="submit">Submit</button>
-      </form>
-      <p class="verdict" id="verdict" aria-live="polite"></p>
-      <div class="hints">
-        <button class="btn ghost sm" id="hint1">Hint 1</button>
-        <button class="btn ghost sm" id="hint2">Hint 2</button>
-        <span class="hint-note">Hints are recorded on your timeline.</span>
-      </div>
-      <ol class="hint-list" id="hint-list"></ol>
-    </article>
-  </section>
-
-  <!-- complete -->
-  <section class="screen" id="complete" hidden>
-    <div class="panel certificate" id="cert"></div>
-  </section>
-</main>
-
-<!-- drawers / modals -->
-<div class="scrim" id="scrim" hidden></div>
-<aside class="drawer" id="timeline" hidden>
-  <header><h3>Progress timeline</h3><button class="btn ghost sm" data-close>Close</button></header>
-  <div class="stats" id="stats"></div>
-  <div class="legend">
-    <span><i class="cell clean"></i>No hints</span><span><i class="cell h1"></i>1 hint</span>
-    <span><i class="cell h2"></i>2 hints</span><span><i class="cell current"></i>Current</span><span><i class="cell"></i>Locked</span>
-  </div>
-  <div class="tl" id="tl"></div>
-</aside>
-<aside class="drawer" id="dossier" hidden>
-  <header><h3>Dossier</h3><button class="btn ghost sm" data-close>Close</button></header>
-  <p class="fine">Every door you have opened, with the answer you gave.</p>
-  <div id="dossier-list"></div>
-</aside>
-<aside class="drawer" id="settings" hidden>
-  <header><h3>Progress</h3><button class="btn ghost sm" data-close>Close</button></header>
-  <p>Your progress lives only in this browser. Export it to keep a backup or continue elsewhere.</p>
-  <div class="row"><button class="btn ghost" id="export">Export code</button><button class="btn ghost" id="import">Import code</button></div>
-  <textarea id="io" rows="5" spellcheck="false" placeholder="Progress code"></textarea>
-  <hr>
-  <button class="btn danger" id="reset">Reset all progress</button>
-</aside>
-<div class="modal" id="modal" hidden>
-  <div class="panel">
-    <h3 id="modal-title"></h3>
-    <p id="modal-text"></p>
-    <div class="row"><button class="btn ghost" id="modal-no">Cancel</button><button class="btn primary" id="modal-yes">Continue</button></div>
-  </div>
+  </footer>
 </div>
-<div class="viewer" id="viewer" hidden>
-  <div class="panel">
-    <header><h3 id="viewer-title"></h3><button class="btn ghost sm" data-close-viewer>Close</button></header>
+
+<!-- sheets -->
+<section class="sheet" id="timeline" hidden>
+  <div class="page">
+    <div class="sheet-head"><h3>Timeline</h3><button class="link" data-close>Close</button></div>
+    <div class="stats" id="stats"></div>
+    <p class="label legend">@ No hints   # One hint   * Two hints   • Current   · Locked</p>
+    <div id="tl"></div>
+  </div>
+</section>
+<section class="sheet" id="dossier" hidden>
+  <div class="page">
+    <div class="sheet-head"><h3>Dossier</h3><button class="link" data-close>Close</button></div>
+    <p class="body">Every door you have opened, with the answer you gave.</p>
+    <div id="dossier-list"></div>
+  </div>
+</section>
+<section class="sheet" id="settings" hidden>
+  <div class="page">
+    <div class="sheet-head"><h3>Progress</h3><button class="link" data-close>Close</button></div>
+    <p class="body">Your progress lives only in this browser. Export it to keep a backup or to continue on another device.</p>
+    <div class="row" style="margin: var(--row-3) 0"><button class="btn quiet" id="export">Export code</button><button class="btn quiet" id="import">Import code</button></div>
+    <label class="label field" for="io">Progress code</label>
+    <textarea id="io" rows="5" spellcheck="false"></textarea>
+    <div style="margin-top: var(--row-6); border-top: 1px solid var(--zl-ink); padding-top: var(--row-3)">
+      <button class="link" id="reset">Reset all progress</button>
+    </div>
+  </div>
+</section>
+<section class="sheet" id="viewer" hidden>
+  <div class="page">
+    <div class="sheet-head"><h3 id="viewer-title"></h3><button class="link" data-close-viewer>Close</button></div>
     <div class="level-body" id="viewer-body"></div>
   </div>
+</section>
+<div class="dialog" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="inner">
+    <p class="claim" id="modal-title"></p>
+    <p class="body" id="modal-text"></p>
+    <div class="row"><button class="btn" id="modal-yes">Continue</button><button class="link" id="modal-no">Cancel</button></div>
+  </div>
 </div>
 
-<noscript><p class="panel">This assessment needs JavaScript.</p></noscript>
+<noscript><p class="page body">This assessment needs JavaScript.</p></noscript>
 <script type="module" src="app.js"></script>
 </body>
 </html>
