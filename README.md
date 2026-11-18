@@ -25,8 +25,6 @@ The difficulty curve is steep:
 ## Rules of engagement
 
 - **No outside help.** No search engines, no AI assistants, no other people. The tools built into your own browser are allowed. They're part of the test.
-- **The page isn't the whole puzzle.** From Door 8 onward you'll need a desktop browser with developer tools. Sometimes the address bar or the inspector holds what you need.
-- **Code isn't for running.** Some doors show code in a language you aren't told. Trace it by hand.
 - **Two hints per door.** Hints are always available, and every hint you open is recorded on your progress timeline.
 - **Answers are forgiving about format.** Capital letters, spaces, punctuation and accents are ignored.
 
@@ -42,7 +40,7 @@ Players are ranked by how far they get. Ties are broken by how few hints they us
 
 ## Can I just read the source?
 
-You're welcome to try. Every door is encrypted, and only the previous door's answer can unlock the next one. This repository contains no answers, so there's nothing to find by reading ahead.
+You're welcome to try. Every door is encrypted, and only the previous door's answer can unlock the next one.
 
 ## Please don't publish spoilers
 
