@@ -1,4 +1,5 @@
 // O(n!) — a ZepheniaLabs assessment
+import { mountField, lockupHTML } from './field.js';
 // This file holds no answers. Every door is encrypted; the answer to door n is
 // the only thing that can unlock door n + 1. Reading this code will not help you.
 
@@ -59,9 +60,10 @@ const hintsUsed = () => Object.values(state.hints).reduce((a, b) => a + b, 0);
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   const inside = id !== 'entry';
-  $('.actions').hidden = !inside;
-  $('#strip').hidden = !inside;
+  $('#nav').hidden = !inside;
+  $('#progress').hidden = !inside;
   if (inside) $('#who').textContent = state.user;
+  if (id !== 'entry' && entryField) { entryField.stop(); entryField = null; }
 }
 
 async function boot() {
@@ -72,8 +74,11 @@ async function boot() {
   route();
 }
 
+let entryField = null;
+const fieldWidth = (max) => Math.max(120, Math.min(max, document.querySelector('.page').clientWidth - 48));
 function showEntry() {
   show('entry');
+  if (!entryField) entryField = mountField($('#entry-field'), { width: fieldWidth(300) });
   $('#entry-form').onsubmit = (e) => {
     e.preventDefault();
     const user = $('#callsign').value.trim().slice(0, 24);
@@ -108,10 +113,8 @@ async function openLevel(n) {
   if (matchMedia('(pointer:fine)').matches) $('#answer').focus({ preventScroll: true });
 }
 
-function setVerdict(text, cls = '') {
-  const v = $('#verdict');
-  v.textContent = text;
-  v.className = 'verdict ' + cls;
+function setVerdict(text) {
+  $('#verdict').textContent = text;
 }
 
 $('#answer-form').addEventListener('submit', async (e) => {
@@ -122,22 +125,20 @@ $('#answer-form').addEventListener('submit', async (e) => {
   if (!a) return;
   const btn = $('#submit');
   btn.disabled = true;
-  setVerdict('Verifying…');
+  setVerdict('Verifying');
   const next = await tryGates(n, a);
   btn.disabled = false;
   if (!next) {
     state.attempts[n] = (state.attempts[n] || 0) + 1;
     save();
-    setVerdict(`Access denied · attempt ${state.attempts[n]}`, 'bad');
-    const card = $('#card');
-    card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    setVerdict(`Access denied · attempt ${state.attempts[n]}`);
     return;
   }
   state.keys[n + 1] = b64(next);
   state.answers[n] = raw.trim();
   state.solvedAt[n] = Date.now();
   save();
-  setVerdict('Access granted', 'ok');
+  setVerdict('Access granted');
   setTimeout(route, 650);
 });
 
@@ -146,13 +147,15 @@ async function renderHints(n) {
   const used = state.hints[n] || 0;
   $('#hint1').disabled = used >= 1;
   $('#hint2').disabled = used !== 1;
+  $('#hint1').textContent = used >= 1 ? 'Hint 1 opened' : 'Open hint 1';
+  $('#hint2').textContent = used >= 2 ? 'Hint 2 opened' : used === 1 ? 'Open hint 2' : 'Hint 2 · after hint 1';
   const list = $('#hint-list');
   list.innerHTML = '';
   for (let j = 1; j <= used; j++) {
     const h = await openJSON(await hintKey(keyFor(n), n, j), BUNDLE.levels[n - 1].hints[j - 1]);
     const li = document.createElement('li');
     li.className = 'h' + j;
-    li.innerHTML = `<b>Hint ${j}</b>${h.text}`;
+    li.innerHTML = `<span class="label">Hint ${j}</span>${h.text}`;
     list.appendChild(li);
   }
 }
@@ -160,8 +163,8 @@ async function takeHint(j) {
   const n = current();
   if ((state.hints[n] || 0) !== j - 1) return;
   const ok = await confirmModal(`Open hint ${j}?`,
-    j === 1 ? 'This will be recorded on your progress timeline as a hinted door.'
-            : 'This is the last hint for this door. It will be recorded on your timeline.');
+    j === 1 ? 'Opening it marks this door as hinted on your timeline.'
+            : 'This is the last hint for this door. Opening it is recorded on your timeline.');
   if (!ok) return;
   state.hints[n] = j;
   save();
@@ -238,8 +241,9 @@ function runTrigger(t) {
     case 'canvasText': {
       const c = document.getElementById(t.id);
       const x = c.getContext('2d');
-      x.fillStyle = '#0D0E10'; x.fillRect(0, 0, c.width, c.height);
-      x.fillStyle = '#FFA82E'; x.font = '600 64px "IBM Plex Sans Condensed", sans-serif';
+      const cs = getComputedStyle(document.documentElement);
+      x.fillStyle = cs.getPropertyValue('--zl-ground').trim(); x.fillRect(0, 0, c.width, c.height);
+      x.fillStyle = cs.getPropertyValue('--zl-ink').trim(); x.font = '500 64px "IBM Plex Sans", sans-serif';
       x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillText(t.text, c.width / 2, c.height / 2);
       break;
@@ -258,48 +262,56 @@ function runCleanups() {
 }
 
 // ---------------------------------------------------------------- timeline
-function cellClass(n) {
-  const solved = !!state.keys[n + 1];
-  const h = state.hints[n] || 0;
-  if (n === current() && !finished()) return 'current' + (h ? ' h' + h : '');
-  if (!solved) return '';
-  return h === 0 ? 'clean' : 'h' + h;
+// One glyph per door, on the field's tone ramp: denser is cleaner.
+const GLYPH = { locked: '·', current: '•', 0: '@', 1: '#', 2: '*' };
+const HINT_WORD = ['no hints', 'one hint', 'two hints'];
+function doorState(n) {
+  if (n === current() && !finished()) return 'current';
+  if (!state.keys[n + 1]) return 'locked';
+  return state.hints[n] || 0;
+}
+function glyphSpan(n) {
+  const st = doorState(n), h = state.hints[n] || 0;
+  const title = st === 'locked' ? `Door ${n} · locked` : st === 'current' ? `Door ${n} · current${h ? ` · ${HINT_WORD[h]} so far` : ''}` : `Door ${n} · ${HINT_WORD[st]}`;
+  return `<span${st === 'current' ? ' class="now"' : ''} title="${title}">${GLYPH[st]}</span>`;
 }
 function renderStrip() {
-  const s = $('#strip');
-  s.innerHTML = '';
-  for (let n = 1; n <= BUNDLE.count; n++) {
-    const i = document.createElement('i');
-    const c = cellClass(n);
-    if (c) i.className = c;
-    s.appendChild(i);
-  }
+  let html = '';
+  for (let n = 1; n <= BUNDLE.count; n++) html += glyphSpan(n);
+  $('#strip').innerHTML = html;
 }
 function statsHTML() {
   const solved = Object.keys(state.keys).length - 1;
-  const clean = Array.from({ length: solved }, (_, k) => k + 1).filter((n) => !state.hints[n]).length;
+  const clean = Array.from({ length: Math.min(solved, BUNDLE.count) }, (_, k) => k + 1).filter((n) => !state.hints[n]).length;
   const tries = Object.values(state.attempts).reduce((a, b) => a + b, 0);
   const days = Math.max(1, Math.round((Date.now() - state.started) / 864e5));
   return [
     [finished() ? BUNDLE.count : current(), 'Furthest door'],
     [hintsUsed(), 'Hints used'],
     [clean, 'Clean solves'],
-    [solved, 'Doors opened'],
+    [Math.min(solved, BUNDLE.count), 'Doors opened'],
     [tries, 'Denied attempts'],
     [days, days === 1 ? 'Day' : 'Days'],
-  ].map(([v, k]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+  ].map(([v, k]) => `<div class="stat"><span class="claim">${v}</span><span class="label">${k}</span></div>`).join('');
 }
 function timelineHTML() {
-  const tiers = new Map(BUNDLE.levels.map((l) => [l.n, l.tier]));
-  let html = '', last = '';
-  for (let n = 1; n <= BUNDLE.count; n++) {
-    const t = tiers.get(n);
-    if (t.roman !== last) { html += `<div class="tier-label">Tier ${t.roman} · ${t.name}</div>`; last = t.roman; }
-    const h = state.hints[n] || 0;
-    const label = `Door ${n}${h ? ` — ${h} hint${h > 1 ? 's' : ''}` : ''}`;
-    html += `<span class="cell ${cellClass(n)}" title="${label}">${n}</span>`;
+  const tiers = [];
+  for (const l of BUNDLE.levels) {
+    const t = tiers[tiers.length - 1];
+    if (!t || t.roman !== l.tier.roman) tiers.push({ ...l.tier, from: l.n, to: l.n });
+    else t.to = l.n;
   }
-  return html;
+  return tiers.map((t) => {
+    let glyphs = '';
+    const hinted = [];
+    for (let n = t.from; n <= t.to; n++) {
+      glyphs += glyphSpan(n);
+      if (state.hints[n]) hinted.push(`${String(n).padStart(3, '0')} (${state.hints[n]})`);
+    }
+    return `<div class="tier-row"><span class="label">Tier ${t.roman} · ${t.name} · doors ${t.from}–${t.to}</span>
+      <div class="tier-glyphs">${glyphs}</div>
+      <span class="label" style="margin-top: var(--row-1)">${hinted.length ? 'Hinted · ' + hinted.join(' · ') : 'No hints'}</span></div>`;
+  }).join('');
 }
 function renderTimeline() {
   $('#stats').innerHTML = statsHTML();
@@ -311,11 +323,11 @@ function renderDossier() {
   const list = $('#dossier-list');
   list.innerHTML = '';
   const solved = Object.keys(state.answers).map(Number).sort((a, b) => a - b);
-  if (!solved.length) { list.innerHTML = '<p class="fine">Nothing yet.</p>'; return; }
+  if (!solved.length) { list.innerHTML = '<p class="label">Nothing yet</p>'; return; }
   for (const n of solved) {
-    const row = document.createElement('div');
+    const row = document.createElement('button');
     row.className = 'dossier-item';
-    row.innerHTML = `<span class="n">${String(n).padStart(3, '0')}</span><span class="t">…</span><span class="a"></span>`;
+    row.innerHTML = `<span class="label">${String(n).padStart(3, '0')}</span><span class="t body"></span><span class="label a"></span>`;
     row.querySelector('.a').textContent = state.answers[n];
     openJSON(keyFor(n), BUNDLE.levels[n - 1].payload).then((p) => {
       row.querySelector('.t').textContent = p.title;
@@ -330,23 +342,24 @@ function renderDossier() {
 }
 document.querySelector('[data-close-viewer]').onclick = () => { $('#viewer').hidden = true; $('#viewer-body').innerHTML = ''; };
 
-// ---------------------------------------------------------------- drawers & modals
+// ---------------------------------------------------------------- sheets & dialogs
 function openDrawer(id) {
   if (id === 'timeline') renderTimeline();
   if (id === 'dossier') renderDossier();
-  $('#scrim').hidden = false;
+  closeDrawers();
   $('#' + id).hidden = false;
+  $('#' + id).querySelector('[data-close]').focus({ preventScroll: true });
 }
 function closeDrawers() {
-  $('#scrim').hidden = true;
-  for (const d of document.querySelectorAll('.drawer')) d.hidden = true;
+  for (const d of document.querySelectorAll('.sheet')) if (d.id !== 'viewer') d.hidden = true;
 }
 for (const b of document.querySelectorAll('[data-open]')) b.onclick = () => openDrawer(b.dataset.open);
 for (const b of document.querySelectorAll('[data-close]')) b.onclick = closeDrawers;
-$('#scrim').onclick = closeDrawers;
-$('#strip').onclick = () => openDrawer('timeline');
+$('#progress').onclick = () => openDrawer('timeline');
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeDrawers(); $('#viewer').hidden = true; }
+  if (e.key !== 'Escape') return;
+  if (!$('#viewer').hidden) { $('#viewer').hidden = true; return; }
+  closeDrawers();
 });
 
 function confirmModal(title, text) {
@@ -354,11 +367,31 @@ function confirmModal(title, text) {
     $('#modal-title').textContent = title;
     $('#modal-text').textContent = text;
     $('#modal').hidden = false;
+    $('#modal-yes').focus();
     const done = (v) => { $('#modal').hidden = true; resolve(v); };
     $('#modal-yes').onclick = () => done(true);
     $('#modal-no').onclick = () => done(false);
   });
 }
+
+// palette: the viewer chooses the face; the system chooses dark or light
+function applyTheme(palette) {
+  const light = matchMedia('(prefers-color-scheme: light)').matches;
+  document.documentElement.setAttribute('data-theme', `${palette}-${light ? 'light' : 'dark'}`);
+  const r = document.getElementById('pal-' + palette);
+  if (r) r.checked = true;
+}
+const currentPalette = () => (document.documentElement.getAttribute('data-theme') || 'zephyr-dark').split('-')[0];
+for (const r of document.querySelectorAll('input[name=palette]')) {
+  r.onchange = () => {
+    try { localStorage.setItem('zl.palette', r.value); } catch { /* storage unavailable */ }
+    applyTheme(r.value);
+    if (level && level.triggers.some((t) => t.type === 'canvasText')) for (const t of level.triggers) if (t.type === 'canvasText') runTrigger(t);
+  };
+}
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => applyTheme(currentPalette()));
+applyTheme(currentPalette());
+$('#lockup').innerHTML = lockupHTML(40);
 
 // export / import / reset
 $('#export').onclick = () => {
@@ -390,23 +423,34 @@ $('#reset').onclick = async () => {
 };
 
 // ---------------------------------------------------------------- completion
+let endField = null;
 async function showComplete() {
   runCleanups();
   const fin = await openJSON(keyFor(BUNDLE.count + 1), BUNDLE.final);
   show('complete');
-  const when = new Date(Math.max(...Object.values(state.solvedAt))).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  $('#cert').innerHTML = `
-    <p class="eyebrow">ZepheniaLabs // Personnel record</p>
-    <div class="big">${fin.title}</div>
-    <h2></h2>
-    ${fin.body}
-    <div class="stats">${statsHTML()}</div>
-    <p class="fine">Completed ${when}. Ranked by furthest door, then fewest hints.</p>
-    <div class="tl">${timelineHTML()}</div>`;
-  $('#cert h2').textContent = state.user;
+  const when = new Date(Math.max(...Object.values(state.solvedAt))).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  $('#complete').innerHTML = `
+    <div id="cert">
+      <div class="hero">
+        <div>
+          <p class="label">ZepheniaLabs · personnel record</p>
+          <h1 class="display"></h1>
+          <p class="claim" id="cert-user"></p>
+          <div class="body lede">${fin.body}</div>
+        </div>
+        <canvas id="end-field"></canvas>
+      </div>
+      <div class="stats">${statsHTML()}</div>
+      <p class="label">Completed ${when} · ranked by furthest door, then fewest hints</p>
+      <div style="margin-top: var(--row-4)">${timelineHTML()}</div>
+    </div>`;
+  $('#cert .display').textContent = fin.title;
+  $('#cert-user').textContent = state.user;
+  if (endField) endField.stop();
+  endField = mountField($('#end-field'), { width: fieldWidth(300) });
 }
 
 boot().catch((e) => {
-  document.getElementById('app').innerHTML = '<div class="panel"><h2>Facility offline</h2><p>The assessment could not be loaded. Reload the page to try again.</p></div>';
+  document.getElementById('app').innerHTML = '<div class="level"><h2>The assessment could not be loaded.</h2><p class="body" style="margin-top: var(--row-3)">The door data did not arrive. Check your connection and reload the page.</p></div>';
   console.error(e);
 });
