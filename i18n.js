@@ -46,6 +46,9 @@ const S = {
     'cert.eyebrow': 'ZepheniaLabs · personnel record', 'cert.done': 'Completed {date} · ranked by furthest door, then fewest hints',
     'error.title': 'The assessment could not be loaded.', 'error.text': 'The door data did not arrive. Check your connection and reload the page.',
     'viewer': 'Door {n} · {title}',
+    'event.label': 'Event · Marlene', 'event.text': 'Three tokens are hidden across the doors, each split into three parts. A complete token lets you test Marlene.',
+    'event.valid': 'Tokens are valid until {date}.', 'event.redeem': 'How to redeem a complete token will be posted here.',
+    'event.part': 'Event · Marlene · token {t} · part {p} of {of}', 'event.found': 'Fragments found · {n} of 9',
   },
   es: {
     'nav.timeline': 'Cronología', 'nav.dossier': 'Expediente', 'nav.progress': 'Progreso', 'progress.open': 'Abrir la cronología',
@@ -85,6 +88,9 @@ const S = {
     'cert.eyebrow': 'ZepheniaLabs · expediente de personal', 'cert.done': 'Completada el {date} · clasificación por puerta más lejana y luego por menos pistas',
     'error.title': 'No se pudo cargar la evaluación.', 'error.text': 'Los datos de las puertas no llegaron. Revisa tu conexión y vuelve a cargar la página.',
     'viewer': 'Puerta {n} · {title}',
+    'event.label': 'Evento · Marlene', 'event.text': 'Hay tres tokens escondidos entre las puertas, cada uno dividido en tres partes. Un token completo te permite probar a Marlene.',
+    'event.valid': 'Los tokens son válidos hasta el {date}.', 'event.redeem': 'Aquí se publicará cómo canjear un token completo.',
+    'event.part': 'Evento · Marlene · token {t} · parte {p} de {of}', 'event.found': 'Fragmentos encontrados · {n} de 9',
   },
   ko: {
     'nav.timeline': '타임라인', 'nav.dossier': '자료철', 'nav.progress': '진행 상황', 'progress.open': '타임라인 열기',
@@ -124,6 +130,9 @@ const S = {
     'cert.eyebrow': 'ZepheniaLabs · 인사 기록', 'cert.done': '{date} 완료 · 가장 먼 문, 그다음 적은 힌트 순으로 순위 결정',
     'error.title': '평가를 불러오지 못했습니다.', 'error.text': '문 데이터가 도착하지 않았습니다. 연결을 확인하고 페이지를 새로 고치세요.',
     'viewer': '문 {n} · {title}',
+    'event.label': '이벤트 · Marlene', 'event.text': '문 곳곳에 토큰 세 개가 숨겨져 있으며, 각각 세 조각으로 나뉘어 있습니다. 완전한 토큰이 있으면 Marlene을 시험해 볼 수 있습니다.',
+    'event.valid': '토큰은 {date}까지 유효합니다.', 'event.redeem': '완전한 토큰을 사용하는 방법은 여기에 게시됩니다.',
+    'event.part': '이벤트 · Marlene · 토큰 {t} · {of}조각 중 {p}', 'event.found': '찾은 조각 · 9개 중 {n}개',
   },
   ja: {
     'nav.timeline': 'タイムライン', 'nav.dossier': '調書', 'nav.progress': '進捗', 'progress.open': 'タイムラインを開く',
@@ -163,6 +172,9 @@ const S = {
     'cert.eyebrow': 'ZepheniaLabs · 人事記録', 'cert.done': '{date} 完了 · 最も遠い扉、次にヒントの少なさで順位を決定',
     'error.title': '評価を読み込めませんでした。', 'error.text': '扉のデータが届きませんでした。接続を確認し、ページを再読み込みしてください。',
     'viewer': '扉 {n} · {title}',
+    'event.label': 'イベント · Marlene', 'event.text': '扉のあちこちに三つのトークンが隠され、それぞれ三つに分けられています。完全なトークンがあれば、Marleneを試すことができます。',
+    'event.valid': 'トークンの有効期限は{date}までです。', 'event.redeem': '完全なトークンの使い方は、ここでお知らせします。',
+    'event.part': 'イベント · Marlene · トークン{t} · {of}つのうち{p}つ目', 'event.found': '見つけた断片 · 9つのうち{n}つ',
   },
 };
 

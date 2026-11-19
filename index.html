@@ -42,6 +42,8 @@
     <span class="glyphs" id="strip" aria-hidden="true"></span>
   </div>
 
+  <button class="link event-bar" id="event-bar" hidden></button>
+
   <main id="app">
     <!-- entry -->
     <section class="screen" id="entry" hidden>
@@ -53,6 +55,12 @@
           <p class="body lede" data-i18n="entry.lede">The answer to each door is the key to the next. There is no skipping ahead.</p>
         </div>
         <canvas id="entry-field"></canvas>
+      </div>
+      <div class="callout event" id="event-entry" hidden>
+        <p class="label" data-i18n="event.label">Event · Marlene</p>
+        <p class="body" data-i18n="event.text"></p>
+        <p class="body event-dates"></p>
+        <p class="body" data-i18n="event.redeem" style="margin:0"></p>
       </div>
       <ul class="rules">
         <li data-i18n-html="rule.help"><b>No outside help.</b> No search engines, no AI assistants, no other people.</li>
@@ -82,6 +90,10 @@
           <p class="body" style="margin:0" data-i18n="code.text">This snippet is written in a language you are not told. Don’t run it or port it to a real language. Trace it by hand.</p>
         </div>
         <div class="level-body" id="body"></div>
+        <div class="callout event" id="event-door" hidden>
+          <p class="label" id="event-door-label"></p>
+          <p class="event-value" id="event-door-value"></p>
+        </div>
         <form class="answer" id="answer-form" autocomplete="off">
           <input id="answer" spellcheck="false" autocapitalize="off" aria-label="Answer" data-i18n-aria="answer.aria" lang="en">
           <button class="btn" type="submit" id="submit" data-i18n="submit">Submit</button>
@@ -127,6 +139,12 @@
     <div class="stats" id="stats"></div>
     <p class="label legend" data-i18n="legend">@ No hints   # One hint   * Two hints   • Current   · Locked</p>
     <div id="tl"></div>
+    <div class="callout event" id="event-tl" hidden style="margin-top: var(--row-6)">
+      <p class="label" data-i18n="event.label">Event · Marlene</p>
+      <p class="label" id="event-found"></p>
+      <div id="event-tokens"></div>
+      <p class="body event-dates" style="margin:0"></p>
+    </div>
   </div>
 </section>
 <section class="sheet" id="dossier" hidden>

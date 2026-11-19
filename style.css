@@ -147,6 +147,13 @@ canvas { max-width: 100%; }
 :root[lang="ja"] body { line-break: strict; }
 .footer-controls { display: flex; flex-direction: column; align-items: flex-end; gap: var(--row-1); }
 
+/* event */
+.event { margin-bottom: var(--row-4); }
+.event-value, .event-token { font: 500 24px/31.53px var(--font-mono); letter-spacing: 0; margin: 0; }
+.event-token { font-size: 18px; line-height: 23.65px; margin: var(--row-1) 0; }
+.event-dates { margin: var(--row-1) 0; }
+.event-bar { display: block; margin-top: var(--row-1); text-align: left; }
+
 /* completion */
 .complete .hero { align-items: start; }
 
