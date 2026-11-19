@@ -12,6 +12,7 @@ const b64 = (u) => btoa(String.fromCharCode(...u));
 const norm = (s) => s.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 let BUNDLE = null;
+let EVENT = null;           // optional event.json; absent or inactive means no event
 let state = null;
 let level = null;          // decrypted payload of the open door
 let cleanups = [];
@@ -75,6 +76,11 @@ function show(id) {
 async function boot() {
   console.log('%cZEPHENIALABS // O(n!) — console channel open.', 'color:#8B8579');
   BUNDLE = await (await fetch('levels.json', { cache: 'no-cache' })).json();
+  try {
+    const r = await fetch('event.json', { cache: 'no-cache' });
+    if (r.ok) { const e = await r.json(); if (e && e.active) EVENT = e; }
+  } catch { /* no event */ }
+  renderEvent();
   load();
   if (!state || !state.user) return showEntry();
   route();
@@ -96,6 +102,7 @@ function showEntry() {
 }
 
 async function route() {
+  await scanEvent();
   renderStrip();
   if (finished()) return showComplete();
   await openLevel(current());
@@ -116,6 +123,7 @@ async function openLevel(n) {
   setVerdict('');
   renderHints(n);
   for (const t of level.triggers) runTrigger(t);
+  showDoorFragment(n);
   window.scrollTo({ top: 0 });
   if (matchMedia('(pointer:fine)').matches) $('#answer').focus({ preventScroll: true });
 }
@@ -148,6 +156,60 @@ $('#answer-form').addEventListener('submit', async (e) => {
   setVerdict(t('verdict.granted'));
   setTimeout(route, 650);
 });
+
+// ---------------------------------------------------------------- event
+// Fragments are sealed to door keys: a fragment opens only for someone who has reached its door.
+async function eventKey(raw) {
+  const base = await crypto.subtle.importKey('raw', raw, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'HKDF', hash: 'SHA-256', salt: te.encode('zl-clearance'), info: te.encode(`zl-event-${EVENT.id}`) }, base, 256));
+}
+const eventStore = () => {
+  state.event = state.event || {};
+  return (state.event[EVENT.id] = state.event[EVENT.id] || { byDoor: {} });
+};
+async function scanEvent() {
+  if (!EVENT || !state) return;
+  const store = eventStore();
+  const doors = Object.keys(state.keys).map(Number).filter((n) => !(n in store.byDoor) && !store.checked?.includes(n));
+  for (const n of doors) {
+    const k = await eventKey(ub64(state.keys[n]));
+    for (const f of EVENT.fragments) {
+      try { store.byDoor[n] = JSON.parse(td.decode(await openBox(k, f))); break; } catch { /* not this door */ }
+    }
+    store.checked = [...(store.checked || []), n];
+  }
+  save();
+  renderEvent();
+}
+function showDoorFragment(n) {
+  const box = $('#event-door');
+  const f = EVENT && state.event && state.event[EVENT.id] && state.event[EVENT.id].byDoor[n];
+  box.hidden = !f;
+  if (!f) return;
+  $('#event-door-label').textContent = t('event.part', { t: f.token, p: f.part, of: f.of });
+  $('#event-door-value').textContent = f.value;
+}
+function renderEvent() {
+  const on = !!EVENT;
+  for (const id of ['#event-entry', '#event-tl']) $(id).hidden = !on;
+  $('#event-bar').hidden = !on || !state || !state.user;
+  if (!on) return;
+  const ends = new Date(EVENT.ends + 'T23:59:59').toLocaleDateString(locale(), { year: 'numeric', month: 'long', day: 'numeric' });
+  for (const el of document.querySelectorAll('.event-dates')) el.textContent = t('event.valid', { date: ends });
+  const found = state && state.event && state.event[EVENT.id] ? Object.values(state.event[EVENT.id].byDoor) : [];
+  $('#event-bar').textContent = `${t('event.label')} · ${t('event.found', { n: found.length })}`;
+  $('#event-found').textContent = t('event.found', { n: found.length });
+  $('#event-tokens').innerHTML = '';
+  for (const name of ['A', 'B', 'C']) {
+    const parts = [1, 2, 3].map((p) => (found.find((f) => f.token === name && f.part === p) || {}).value || '······');
+    const row = document.createElement('p');
+    row.className = 'event-token';
+    row.textContent = `${name}  ${parts.join('-')}`;
+    $('#event-tokens').appendChild(row);
+  }
+}
+$('#event-bar').onclick = () => openDrawer('timeline');
 
 // ---------------------------------------------------------------- hints
 async function renderHints(n) {
@@ -410,6 +472,7 @@ for (const r of document.querySelectorAll('input[name=lang]')) {
   r.onchange = async () => {
     try { localStorage.setItem('zl.lang', r.value); } catch { /* storage unavailable */ }
     applyLang(r.value);
+    renderEvent();
     if (!BUNDLE || !state || !state.user) return;
     renderStrip();
     if (!$('#timeline').hidden) renderTimeline();
@@ -477,6 +540,8 @@ async function showComplete() {
     </div>`;
   $('#cert .display').textContent = fin.title;
   $('#cert-user').textContent = state.user;
+  const ef = EVENT && state.event && state.event[EVENT.id] && state.event[EVENT.id].byDoor[BUNDLE.count + 1];
+  if (ef) $('#cert .stats').insertAdjacentHTML('beforebegin', `<div class="callout event"><p class="label">${t('event.part', { t: ef.token, p: ef.part, of: ef.of })}</p><p class="event-value">${ef.value}</p></div>`);
   if (endField) endField.stop();
   endField = mountField($('#end-field'), { width: fieldWidth(300) });
 }
